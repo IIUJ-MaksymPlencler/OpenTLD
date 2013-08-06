@@ -43,6 +43,7 @@ DetectionResult::DetectionResult()
     detectorBB = NULL;
 
     variances = NULL;
+	//similarities = NULL;
     posteriors = NULL;
     featureVectors = NULL;
 }
@@ -56,6 +57,7 @@ void DetectionResult::init(int numWindows, int numTrees)
 {
     variances = new float[numWindows];
     posteriors = new float[numWindows];
+	//similarities = new float[numWindows];
     featureVectors = new int[numWindows * numTrees];
     confidentIndices = new vector<int>();
 
@@ -79,6 +81,8 @@ void DetectionResult::release()
     fgList->clear();
     delete[] variances;
     variances = NULL;
+	//delete[] similarities;
+    //similarities = NULL;
     delete[] posteriors;
     posteriors = NULL;
     delete[] featureVectors;

@@ -43,6 +43,7 @@ public:
     std::vector<int>* confidentIndices;
     int *featureVectors;
     float *variances;
+	//float *similarities;
     int numClusters;
     cv::Rect *detectorBB; //Contains a valid result only if numClusters = 1
 

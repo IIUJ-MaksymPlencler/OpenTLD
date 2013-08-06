@@ -400,6 +400,26 @@ int Config::init(int argc, char **argv)
         {
             // Ignore
         }
+
+		//AFFINE TRANSFORM
+		m_cfg.lookupValue("affineTransform.isAffineTransformation", m_settings.m_isAffineTransformation);
+		m_cfg.lookupValue("affineTransform.isInitialAffine", m_settings.m_isInitialAffine);
+		m_cfg.lookupValue("affineTransform.isLearningAffine", m_settings.m_isLearningAffine);
+		m_cfg.lookupValue("affineTransform.angle", m_settings.m_angle);
+		m_cfg.lookupValue("affineTransform.angleStep", m_settings.m_angleStep);
+		m_cfg.lookupValue("affineTransform.numberOfRotations", m_settings.m_numberOfRotations);
+		m_cfg.lookupValue("affineTransform.scale", m_settings.m_scale);
+		m_cfg.lookupValue("affineTransform.scaleStep", m_settings.m_scaleStep);
+		m_cfg.lookupValue("affineTransform.numberOfScales", m_settings.m_numberOfScales);
+		
+		//HISTOGRAM EQUALIZATION
+		m_cfg.lookupValue("histogramEqualization.isHistogramEqualization", m_settings.m_isHistogramEqualization);
+		m_cfg.lookupValue("histogramEqualization.isInitialHistogram", m_settings.m_isInitialHistogram);
+		m_cfg.lookupValue("histogramEqualization.isLearningHistogram", m_settings.m_isLearningHistogram);
+
+		//SHAPE CLASSIFIER
+		m_cfg.lookupValue("shapeClassifier.shapeClassifierEnabled", m_settings.m_shapeClassifierEnabled);
+		m_cfg.lookupValue("shapeClassifier.shapeClassifierSimilarityThreshold", m_settings.m_shapeClassifierSimilarityThreshold);
     }
 
     return SUCCESS;
@@ -434,6 +454,21 @@ int Config::configure(Main *main)
     main->modelPath = (m_settings.m_modelPath.empty()) ? NULL : m_settings.m_modelPath.c_str();
     main->seed = m_settings.m_seed;
 
+	//AFFINE TRANSFORM
+	main->tld->isAffineTransformation = m_settings.m_isAffineTransformation;
+	main->tld->isInitialAffine = m_settings.m_isInitialAffine;
+	main->tld->isLearningAffine = m_settings.m_isLearningAffine;
+	main->tld->angle = m_settings.m_angle;
+	main->tld->angleStep = m_settings.m_angleStep;
+	main->tld->numberOfRotations = m_settings.m_numberOfRotations;
+	main->tld->scale = m_settings.m_scale;
+	main->tld->scaleStep = m_settings.m_scaleStep;
+	main->tld->numberOfScales = m_settings.m_numberOfScales;
+	//HISTOGRAM EQUALIZATION
+	main->tld->isHistogramEqualization = m_settings.m_isHistogramEqualization;
+	main->tld->isInitialHistogram = m_settings.m_isInitialHistogram;
+	main->tld->isLearningHistogram = m_settings.m_isLearningHistogram;
+
     if(m_settings.m_initialBoundingBox.size() > 0)
     {
         main->initialBB = new int[4];
@@ -459,6 +494,10 @@ int Config::configure(Main *main)
     detectorCascade->numFeatures = m_settings.m_numFeatures;
     detectorCascade->nnClassifier->thetaTP = m_settings.m_thetaP;
     detectorCascade->nnClassifier->thetaFP = m_settings.m_thetaN;
+
+	//SHAPE CLASSIFIER
+	detectorCascade->shapeClassifier->enabled = m_settings.m_shapeClassifierEnabled;
+	detectorCascade->shapeClassifier->similarityThreshold = m_settings.m_shapeClassifierSimilarityThreshold;
 
     return SUCCESS;
 }

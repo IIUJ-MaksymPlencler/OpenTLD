@@ -116,7 +116,7 @@ void Main::doWork()
         {
             skipProcessingOnce = false;
         }
-
+		/*
         if(printResults != NULL)
         {
             if(tld->currBB != NULL)
@@ -126,6 +126,18 @@ void Main::doWork()
             else
             {
                 fprintf(resultsFile, "%d NaN NaN NaN NaN NaN\n", imAcq->currentFrame - 1);
+            }
+        }
+		*/
+		 if(printResults != NULL)
+        {
+            if(tld->currBB != NULL)
+            {
+				fprintf(resultsFile, "%.2d %.2d %.2d %.2d\n", tld->currBB->x, tld->currBB->y, tld->currBB->x + tld->currBB->width -1, tld->currBB->y + tld->currBB->height -1);
+            }
+            else
+            {
+                fprintf(resultsFile, "NaN NaN NaN NaN\n");
             }
         }
 

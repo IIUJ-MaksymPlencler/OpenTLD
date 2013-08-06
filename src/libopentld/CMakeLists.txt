@@ -20,6 +20,7 @@ add_library(libopentld
     tld/ForegroundDetector.cpp
     tld/MedianFlowTracker.cpp
     tld/NNClassifier.cpp
+	tld/ShapeClassifier.cpp
     tld/TLD.cpp
     tld/TLDUtil.cpp
     tld/VarianceFilter.cpp
@@ -33,6 +34,7 @@ add_library(libopentld
     tld/DetectionResult.h
     tld/DetectorCascade.h
     tld/EnsembleClassifier.h
+	tld/ShapeClassifier.h
     tld/ForegroundDetector.h
     tld/IntegralImage.h
     tld/MedianFlowTracker.h

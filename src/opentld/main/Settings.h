@@ -76,6 +76,23 @@ public:
     std::string m_printResults; //!< path to the file were the results should be printed; NULL -> results will not be printed
     std::string m_printTiming; //!< path to the file were the timings should be printed; NULL -> results will not be printed
     std::vector<int> m_initialBoundingBox; //!< Initial Bounding Box can be specified here
+
+	bool m_isAffineTransformation;
+	bool m_isInitialAffine;
+	bool m_isLearningAffine;
+	float m_angle;
+	float m_angleStep;
+	int m_numberOfRotations;
+	float m_scale;
+	float m_scaleStep;
+	int m_numberOfScales;
+
+	bool m_isHistogramEqualization;
+	bool m_isInitialHistogram;
+	bool m_isLearningHistogram;
+
+	bool m_shapeClassifierEnabled;
+	float m_shapeClassifierSimilarityThreshold;
 };
 
 }

@@ -27,10 +27,11 @@
 #include "DetectorCascade.h"
 
 #include <algorithm>
-
+#include <iostream>
 #include "TLDUtil.h"
 
 using namespace cv;
+
 
 namespace tld
 {
@@ -59,6 +60,7 @@ DetectorCascade::DetectorCascade()
 
     foregroundDetector = new ForegroundDetector();
     varianceFilter = new VarianceFilter();
+	shapeClassifier = new ShapeClassifier();
     ensembleClassifier = new EnsembleClassifier();
     nnClassifier = new NNClassifier();
     clustering = new Clustering();
@@ -72,6 +74,7 @@ DetectorCascade::~DetectorCascade()
 
     delete foregroundDetector;
     delete varianceFilter;
+	delete shapeClassifier;
     delete ensembleClassifier;
     delete nnClassifier;
     delete detectionResult;
@@ -100,12 +103,14 @@ void DetectorCascade::propagateMembers()
     detectionResult->init(numWindows, numTrees);
 
     varianceFilter->windowOffsets = windowOffsets;
+	shapeClassifier->windowOffsets = windowOffsets;
     ensembleClassifier->windowOffsets = windowOffsets;
     ensembleClassifier->imgWidthStep = imgWidthStep;
     ensembleClassifier->numScales = numScales;
     ensembleClassifier->scales = scales;
     ensembleClassifier->numFeatures = numFeatures;
     ensembleClassifier->numTrees = numTrees;
+	shapeClassifier->windows = windows;
     nnClassifier->windows = windows;
     clustering->windows = windows;
     clustering->numWindows = numWindows;
@@ -114,6 +119,7 @@ void DetectorCascade::propagateMembers()
 
     foregroundDetector->detectionResult = detectionResult;
     varianceFilter->detectionResult = detectionResult;
+	shapeClassifier->detectionResult = detectionResult;
     ensembleClassifier->detectionResult = detectionResult;
     nnClassifier->detectionResult = detectionResult;
     clustering->detectionResult = detectionResult;
@@ -129,6 +135,7 @@ void DetectorCascade::release()
     initialised = false;
 
     foregroundDetector->release();
+	shapeClassifier->release();
     ensembleClassifier->release();
     nnClassifier->release();
 
@@ -281,13 +288,13 @@ void DetectorCascade::detect(const Mat &img)
     //Prepare components
     foregroundDetector->nextIteration(img); //Calculates foreground
     varianceFilter->nextIteration(img); //Calculates integral images
+	shapeClassifier->nextIteration(img);
     ensembleClassifier->nextIteration(img);
 
     #pragma omp parallel for
-
+	
     for(int i = 0; i < numWindows; i++)
     {
-
         int *window = &windows[TLD_WINDOW_SIZE * i];
 
         if(foregroundDetector->isActive())
@@ -319,21 +326,25 @@ void DetectorCascade::detect(const Mat &img)
             continue;
         }
 
-        if(!ensembleClassifier->filter(i))
+		if(!ensembleClassifier->filter(i))
         {
             continue;
         }
 
+		if(!shapeClassifier->filter(i))
+        {
+			continue;
+        }
+		
         if(!nnClassifier->filter(img, i))
         {
             continue;
         }
-
+			
         detectionResult->confidentIndices->push_back(i);
 
-
     }
-
+	
     //Cluster
     clustering->clusterConfidentIndices();
 

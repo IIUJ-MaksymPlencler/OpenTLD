@@ -26,6 +26,7 @@
 #include "TLD.h"
 
 #include <iostream>
+#include <opencv/highgui.h>
 
 #include "NNClassifier.h"
 #include "TLDUtil.h"
@@ -47,6 +48,11 @@ TLD::TLD()
     learning = false;
     currBB = prevBB = NULL;
 
+	//AFFINE TRANSFORM
+	isAffineTransformation = false;
+	//HISTOGRAM EQUALIZATION
+	isHistogramEqualization = false;
+	
     detectorCascade = new DetectorCascade();
     nnClassifier = detectorCascade->nnClassifier;
 
@@ -145,7 +151,7 @@ void TLD::fuseHypotheses()
     if(trackerBB != NULL)
     {
         float confTracker = nnClassifier->classifyBB(currImg, trackerBB);
-
+			
         if(numClusters == 1 && confDetector > confTracker && tldOverlapRectRect(*trackerBB, *detectorBB) < 0.5)
         {
 
@@ -228,12 +234,70 @@ void TLD::initialLearning()
         }
     }
 
-    sort(positiveIndices.begin(), positiveIndices.end(), tldSortByOverlapDesc);
+    //sort(positiveIndices.begin(), positiveIndices.end(), tldSortByOverlapDesc);
 
     vector<NormalizedPatch> patches;
 
     patches.push_back(patch); //Add first patch to patch list
+	
+	
+	// Histogram Equalization
+	if (isHistogramEqualization && isInitialHistogram)
+	{
+		Mat histEqalized;
+		equalizeHist(currImg, histEqalized);
+		tldExtractNormalizedPatchRect(histEqalized, currBB, patch.values);
+		patch.positive = 1;
+		patches.push_back(patch);
+	}
+	/*
+	Mat positive = histEqalized(Rect(currBB->x, currBB->y, currBB->width, currBB->height)).clone();
+	imshow("IH positive", positive);
+	Mat normal = currImg(Rect(currBB->x, currBB->y, currBB->width, currBB->height)).clone();
+	imshow("IH initial", normal);
+	*/
 
+	// Affine transform
+	if (isAffineTransformation && isInitialAffine)
+	{
+		Mat rot_mat( 2, 3, CV_32FC1 );
+		Mat wrapRotateImg;
+		wrapRotateImg = Mat::zeros( currImg.rows, currImg.cols, currImg.type() );
+
+		Point center = Point( wrapRotateImg.cols/2, wrapRotateImg.rows/2 );
+		double l_angle = angle;
+		double l_angleStep = angleStep;
+		double l_scale = scale;
+		double l_scaleStep = scaleStep;
+
+		int l_numberOfRotations = numberOfRotations;
+		int l_numberOfScales = numberOfScales;
+
+		for (int i = 0; i < l_numberOfRotations; i++)
+		{
+			for (int j = 0; j < l_numberOfScales; j++)
+			{
+				if (l_angle != 0 || l_scale != 1) {
+					rot_mat = getRotationMatrix2D( center, l_angle, l_scale ); // rotation matrix
+					warpAffine(currImg, wrapRotateImg, rot_mat, wrapRotateImg.size());
+					tldExtractNormalizedPatchRect(wrapRotateImg, currBB, patch.values);
+					patch.positive = 1;
+					patches.push_back(patch);
+					/*
+					Mat img = wrapRotateImg(Rect(currBB->x, currBB->y, currBB->width, currBB->height)).clone();
+					std::stringstream msg;
+					msg << "IA angleStep" << i << " anlge" << angle << " scaleStep " << j << "scale" << scale;
+					imshow(msg.str() , img);
+					*/
+				}
+				l_scale += l_scaleStep;
+			}
+			l_scale = scale;
+			l_angle += l_angleStep;
+		}
+	}
+
+	sort(positiveIndices.begin(), positiveIndices.end(), tldSortByOverlapDesc);
     int numIterations = std::min<size_t>(positiveIndices.size(), 10); //Take at most 10 bounding boxes (sorted by overlap)
 
     for(int i = 0; i < numIterations; i++)
@@ -249,6 +313,7 @@ void TLD::initialLearning()
     random_shuffle(negativeIndices.begin(), negativeIndices.end());
 
     //Choose 100 random patches for negative examples
+	boolean tata = true;
     for(size_t i = 0; i < std::min<size_t>(100, negativeIndices.size()); i++)
     {
         int idx = negativeIndices.at(i);
@@ -257,9 +322,32 @@ void TLD::initialLearning()
         tldExtractNormalizedPatchBB(currImg, &detectorCascade->windows[TLD_WINDOW_SIZE * idx], patch.values);
         patch.positive = 0;
         patches.push_back(patch);
+		
+		// Histogram Equalization IH
+		if (isHistogramEqualization && isInitialHistogram)
+		{
+			Mat histEqalized;
+			equalizeHist(currImg, histEqalized);
+			tldExtractNormalizedPatchBB(histEqalized, &detectorCascade->windows[TLD_WINDOW_SIZE * idx], patch.values);
+			patch.positive = 0;
+			patches.push_back(patch);
+		}
+		
+		/*
+		if (tata){
+		Mat negative = histEqalized(Rect(
+			(&detectorCascade->windows[TLD_WINDOW_SIZE * idx])[0], 
+			(&detectorCascade->windows[TLD_WINDOW_SIZE * idx])[1],
+			(&detectorCascade->windows[TLD_WINDOW_SIZE * idx])[2], 
+			(&detectorCascade->windows[TLD_WINDOW_SIZE * idx])[3])
+								).clone();
+		imshow("IH negative", negative);
+		tata = false;
+		}*/
+	
     }
-
     detectorCascade->nnClassifier->learn(patches);
+	detectorCascade->shapeClassifier->setPositivePatches(detectorCascade->nnClassifier->truePositives);
 
     delete[] overlap;
 
@@ -327,8 +415,67 @@ void TLD::learn()
 
     patch.positive = 1;
     patches.push_back(patch);
-    //TODO: Flip
+	
+	// Histogram Equalization _Lh
+	if (isHistogramEqualization && isLearningHistogram)
+	{
+		Mat histEqalized;
+		equalizeHist(currImg, histEqalized);
+		tldExtractNormalizedPatchRect(histEqalized, currBB, patch.values);
+		patch.positive = 1;
+		patches.push_back(patch);
+	}
+	
 
+	// Log transformation _Ll
+	//Mat logTransformed;
+	//cv::log(currImg + 1, logTransformed);
+    //cv::convertScaleAbs(logTransformed, logTransformed);
+    //cv::normalize(logTransformed, logTransformed, 0, 255, cv::NORM_MINMAX);
+	//tldExtractNormalizedPatchRect(logTransformed, currBB, patch.values);
+	//patch.positive = 1;
+	//patches.push_back(patch);
+
+	
+	// Affine transform
+	if (isAffineTransformation && isLearningAffine)
+	{
+		Mat rot_mat( 2, 3, CV_32FC1 );
+		Mat wrapRotateImg;
+		wrapRotateImg = Mat::zeros( currImg.rows, currImg.cols, currImg.type() );
+
+		Point center = Point( wrapRotateImg.cols/2, wrapRotateImg.rows/2 );
+		double l_angle = angle;
+		double l_angleStep = angleStep;
+		double l_scale = scale;
+		double l_scaleStep = scaleStep;
+
+		int l_numberOfRotations = numberOfRotations;
+		int l_numberOfScales = numberOfScales;
+
+		for (int i = 0; i < l_numberOfRotations; i++)
+		{
+			for (int j = 0; j < l_numberOfScales; j++)
+			{
+				if (l_angle != 0 || l_scale != 1) {
+					rot_mat = getRotationMatrix2D( center, l_angle, l_scale ); // rotation matrix
+					warpAffine(currImg, wrapRotateImg, rot_mat, wrapRotateImg.size());
+					tldExtractNormalizedPatchRect(wrapRotateImg, currBB, patch.values);
+					patch.positive = 1;
+					patches.push_back(patch);
+					/*
+					Mat img = wrapRotateImg(Rect(currBB->x, currBB->y, currBB->width, currBB->height)).clone();
+					std::stringstream msg;
+					msg << "IA angleStep" << i << " anlge" << angle << " scaleStep " << j << "scale" << scale;
+					imshow(msg.str() , img);
+					*/ 
+				}
+				l_scale += l_scaleStep;
+			}
+			l_scale = scale;
+			l_angle += l_angleStep;
+		}
+	}
 
     int numIterations = std::min<size_t>(positiveIndices.size(), 10); //Take at most 10 bounding boxes (sorted by overlap)
 
@@ -351,13 +498,26 @@ void TLD::learn()
     {
         int idx = negativeIndicesForNN.at(i);
 
+		// Regular patch added to set
         NormalizedPatch patch;
         tldExtractNormalizedPatchBB(currImg, &detectorCascade->windows[TLD_WINDOW_SIZE * idx], patch.values);
         patch.positive = 0;
         patches.push_back(patch);
+
+		// More patches:
+		// Histogram Equalization _Lh
+		if (isHistogramEqualization && isLearningHistogram)
+		{
+			Mat histEqalized;
+			equalizeHist(currImg, histEqalized);
+			tldExtractNormalizedPatchBB(histEqalized, &detectorCascade->windows[TLD_WINDOW_SIZE * idx], patch.values);
+			patch.positive = 0;
+			patches.push_back(patch);
+		}
     }
 
     detectorCascade->nnClassifier->learn(patches);
+	detectorCascade->shapeClassifier->setPositivePatches(detectorCascade->nnClassifier->truePositives);
 
     //cout << "NN has now " << detectorCascade->nnClassifier->truePositives->size() << " positives and " << detectorCascade->nnClassifier->falsePositives->size() << " negatives.\n";
 

@@ -59,6 +59,21 @@ public:
     float currConf;
     bool learning;
 
+	//AFFINE TRANSFORM
+	bool isAffineTransformation;
+	bool isInitialAffine;
+	bool isLearningAffine;
+	float angle;
+	float angleStep;
+	int numberOfRotations;
+	float scale;
+	float scaleStep;
+	int numberOfScales;
+	//HISTOGRAM EQUALIZATION
+	bool isHistogramEqualization;
+	bool isInitialHistogram;
+	bool isLearningHistogram;
+
     TLD();
     virtual ~TLD();
     void release();

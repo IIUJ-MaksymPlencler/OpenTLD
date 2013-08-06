@@ -29,6 +29,7 @@
 #include "DetectionResult.h"
 #include "ForegroundDetector.h"
 #include "VarianceFilter.h"
+#include "ShapeClassifier.h"
 #include "EnsembleClassifier.h"
 #include "Clustering.h"
 #include "NNClassifier.h"
@@ -73,6 +74,7 @@ public:
     //Components of Detector Cascade
     ForegroundDetector *foregroundDetector;
     VarianceFilter *varianceFilter;
+	ShapeClassifier *shapeClassifier;
     EnsembleClassifier *ensembleClassifier;
     Clustering *clustering;
     NNClassifier *nnClassifier;
